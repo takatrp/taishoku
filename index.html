@@ -125,6 +125,7 @@
       gap: 20px;
       margin-bottom: 24px;
       padding: 4px 0;
+      flex-wrap: wrap;
     }
     .radio-label {
       display: flex;
@@ -533,7 +534,7 @@
     <div class="header-content">
       <h1>
         退職金試算ツール
-        <span class="badge">Ver 1.1</span>
+        <span class="badge">Ver 1.2</span>
       </h1>
       <p class="lead">
         役員退職金の適正額目安および、退職手当の手取り額を概算シミュレーションします。
@@ -575,6 +576,15 @@
             <input id="officerYears" type="number" min="0" step="1" placeholder="例）10" />
             <div class="suffix">年（適正額・特定役員の判定に使用）</div>
           </div>
+
+          <div class="field" id="reasonField">
+            <label for="reason">退職理由</label>
+            <select id="reason">
+              <option value="normal" selected>通常の退職（定年・自己都合・会社都合など）</option>
+              <option value="disabled">障害退職（障害者となったことに直接起因する退職）</option>
+            </select>
+            <div class="suffix">障害退職の場合は退職所得控除に100万円加算します。</div>
+          </div>
         </div>
 
         <div id="rightCol">
@@ -608,6 +618,32 @@
             <label for="actualAmount" id="actualAmountLabel">支給金額（予定）</label>
             <input id="actualAmount" type="text" inputmode="numeric" placeholder="支給総額を入力" class="comma-input" />
             <div class="suffix" id="actualAmountSuffix">円（役員は未入力時、目安額で計算）</div>
+          </div>
+
+          <div class="field" id="splitField">
+            <label>
+              <input type="checkbox" id="enableSplit" style="width:auto; margin-right:6px; vertical-align:middle;">
+              役員部分と従業員部分に分けて課税計算する（上級者向け）
+            </label>
+            <div class="suffix">
+              同一年中に役員期間に対応する部分と従業員期間に対応する部分が混在する場合に利用します。
+            </div>
+          </div>
+
+          <div id="splitContainer" class="hidden">
+            <div class="field" id="officerPartField">
+              <label for="officerPart">役員期間に対応する退職金</label>
+              <input id="officerPart" type="text" inputmode="numeric" placeholder="例）20,000,000" class="comma-input" />
+              <div class="suffix">円（特定役員退職手当等の対象部分）</div>
+            </div>
+            <div class="field" id="employeePartField">
+              <label for="employeePart">従業員期間に対応する退職金</label>
+              <input id="employeePart" type="text" inputmode="numeric" placeholder="例）10,000,000" class="comma-input" />
+              <div class="suffix">円（一般／短期退職手当等の対象部分）</div>
+            </div>
+            <div class="note" style="font-size:0.75rem;">
+              役員部分＋従業員部分の合計は、上記「支給金額（予定）」と一致させてください。未入力の場合は合計額を支給金額として扱います。
+            </div>
           </div>
         </div>
       </div>
@@ -681,7 +717,7 @@
               <td id="deductionCell"></td>
             </tr>
             <tr>
-              <th>課税退職所得金額</th>
+              <th>課税退職所得金額<br><span style="font-size:0.75rem; font-weight:normal;">（1,000円未満切捨て後）</span></th>
               <td id="taxableRetCell"></td>
             </tr>
             <tr>
@@ -742,6 +778,9 @@
           <li><strong>勤続5年以下の従業員の退職金（短期退職手当等）</strong><br>
           勤続年数が5年以下の従業員に支給する退職金は、原則として「短期退職手当等」として取り扱われ、退職所得控除額を控除した残額のうち300万円を超える部分については2分の1課税が適用されません。本ツールではこの計算に対応していますが、退職事由や支給形態によっては該当しないケースもあるため、詳細は専門家にご確認ください。</li>
 
+          <li><strong>障害退職の場合</strong><br>
+          障害者となったことに直接基因して退職した場合の退職所得控除額（＋100万円加算）に対応していますが、障害認定の有無や時期等の判断は、必ず専門家にご確認ください。</li>
+          
           <li><strong>他の退職金との合算</strong><br>
           同一年中に、他の会社やiDeCo（個人型確定拠出年金）などから退職金を受け取っている場合、それらを合算して退職所得控除や税額を計算する必要があります。本ツールは「今回入力した退職金」のみを対象としており、合算計算には対応していません。</li>
 
@@ -775,6 +814,10 @@
     const totalYearsInput = document.getElementById('totalYears');
     const officerYearsInput = document.getElementById('officerYears');
     const actualAmountInput = document.getElementById('actualAmount');
+    const reasonSelect = document.getElementById('reason');
+    const splitToggle = document.getElementById('enableSplit');
+    const officerPartInput = document.getElementById('officerPart');
+    const employeePartInput = document.getElementById('employeePart');
     
     // UI Elements (Fields)
     const leftCol = document.getElementById('leftCol');
@@ -782,11 +825,13 @@
     const lastSalaryField = document.getElementById('lastSalaryField');
     const totalYearsField = document.getElementById('totalYearsField');
     const officerYearsField = document.getElementById('officerYearsField');
+    const reasonField = document.getElementById('reasonField');
     
     const multiplierField = document.getElementById('multiplierField');
     const meritAdditionField = document.getElementById('meritAdditionField');
-    
     const actualAmountField = document.getElementById('actualAmountField');
+    const splitField = document.getElementById('splitField');
+    const splitContainer = document.getElementById('splitContainer');
 
     const executiveNote = document.getElementById('executiveNote');
     const totalYearsLabel = document.getElementById('totalYearsLabel');
@@ -845,8 +890,10 @@
     function attachCommaListener(input) {
       input.addEventListener('input', (e) => {
         const raw = e.target.value.replace(/,/g, '');
-        if (!raw) return;
-        
+        if (raw === '') {
+          e.target.value = '';
+          return;
+        }
         const num = parseInt(raw, 10);
         if (!isNaN(num)) {
           e.target.value = num.toLocaleString('ja-JP');
@@ -901,13 +948,13 @@
       
       let tax = (taxable * rate - deduction) * 1.021;
       if (tax < 0) tax = 0;
-      return Math.floor(tax);
+      return Math.floor(tax); // 1円未満切捨て
     }
 
     function calcInhabitantTaxRetirement(taxable){
       if (!isFinite(taxable) || taxable <= 0) return 0;
-      const raw = taxable * 0.10;
-      return Math.floor(raw / 100) * 100;
+      const raw = taxable * 0.10; // 市民税6％＋県民税4％（標準税率）
+      return Math.floor(raw / 100) * 100; // 100円未満切捨て
     }
 
     // UI切り替え
@@ -919,7 +966,9 @@
         officerYearsField.classList.remove('hidden');
         multiplierField.classList.remove('hidden');
         meritAdditionField.classList.remove('hidden');
-        copyLimitBtn.style.display = 'block'; // flex -> block (btn-outline style check)
+        splitField.classList.remove('hidden');
+        splitContainer.classList.toggle('hidden', !splitToggle.checked);
+        copyLimitBtn.style.display = 'block';
         executiveNote.style.display = 'block';
 
         totalYearsLabel.textContent = '勤続期間（従業員期間含む）';
@@ -929,16 +978,21 @@
         leftCol.appendChild(lastSalaryField);
         leftCol.appendChild(totalYearsField);
         leftCol.appendChild(officerYearsField);
+        leftCol.appendChild(reasonField);
         
         rightCol.appendChild(multiplierField);
         rightCol.appendChild(meritAdditionField);
         rightCol.appendChild(actualAmountField);
+        rightCol.appendChild(splitField);
+        rightCol.appendChild(splitContainer);
 
       } else {
         lastSalaryField.classList.add('hidden');
         officerYearsField.classList.add('hidden');
         multiplierField.classList.add('hidden');
         meritAdditionField.classList.add('hidden');
+        splitField.classList.add('hidden');
+        splitContainer.classList.add('hidden');
         copyLimitBtn.style.display = 'none';
         executiveNote.style.display = 'none';
 
@@ -946,8 +1000,13 @@
         actualAmountLabel.textContent = '支給金額（直接入力）';
         actualAmountSuffix.textContent = '円';
 
+        splitToggle.checked = false;
+        officerPartInput.value = '';
+        employeePartInput.value = '';
+
         leftCol.appendChild(actualAmountField);
         leftCol.appendChild(totalYearsField);
+        leftCol.appendChild(reasonField);
       }
       
       resultArea.style.display = 'none';
@@ -1023,14 +1082,25 @@
       });
     });
 
+    splitToggle.addEventListener('change', () => {
+      const isExecutive = document.querySelector('input[name="userType"]:checked').value === 'executive';
+      if (!isExecutive) {
+        splitToggle.checked = false;
+        return;
+      }
+      splitContainer.classList.toggle('hidden', !splitToggle.checked);
+    });
+
     // --- Main Calculation ---
     calcBtn.addEventListener('click', () => {
       errorDiv.textContent = '';
       ratioMsg.style.display = 'none';
       resultArea.style.display = 'none';
 
-      const userType = document.querySelector('input[name="userType"]:checked').value;
-      const isExecutive = (userType === 'executive');
+      const userTypeValue = document.querySelector('input[name="userType"]:checked').value;
+      const isExecutive = (userTypeValue === 'executive');
+      const isDisabled = (reasonSelect.value === 'disabled');
+      const splitEnabled = isExecutive && splitToggle.checked;
 
       const lastSalary = parseCommaInt(lastSalaryInput.value);
       const totalYearsRaw = Number(totalYearsInput.value || 0);
@@ -1045,12 +1115,38 @@
         errorDiv.textContent = '勤続期間を入力してください';
         return;
       }
+      if (totalYearsRaw > 80) {
+        // 極端な値への簡易チェック（必要に応じて調整）
+      }
       
       if (isExecutive) {
         if (!lastSalary || lastSalary <= 0){ errorDiv.textContent = '最終月額報酬を入力してください'; return; }
         if (!isFinite(officerYearsRaw) || officerYearsRaw <= 0){ errorDiv.textContent = '役員在任期間を入力してください'; return; }
         if (officerYearsRaw > totalYearsRaw){ errorDiv.textContent = '役員在任期間が勤続期間を超えています'; return; }
         if (factor === null || factor === undefined || factor < 0){ errorDiv.textContent = '功績倍率を正しく入力してください'; return; }
+
+        if (splitEnabled) {
+          const officerPartVal = parseCommaInt(officerPartInput.value);
+          const employeePartVal = parseCommaInt(employeePartInput.value);
+          if (!officerPartVal || officerPartVal <= 0) {
+            errorDiv.textContent = '役員期間に対応する退職金を入力してください';
+            return;
+          }
+          if (officerPartVal < 0 || employeePartVal < 0) {
+            errorDiv.textContent = '退職金の金額は0以上で入力してください';
+            return;
+          }
+          const sumParts = officerPartVal + employeePartVal;
+          if (sumParts <= 0) {
+            errorDiv.textContent = '役員部分と従業員部分の合計が0円です';
+            return;
+          }
+          if (actualInputRaw && actualInputRaw !== sumParts) {
+            errorDiv.textContent = '支給金額（予定）と内訳の合計が一致していません';
+            return;
+          }
+        }
+
       } else {
         if (!actualInputRaw || actualInputRaw <= 0) {
           errorDiv.textContent = '支給金額を入力してください';
@@ -1059,64 +1155,152 @@
       }
 
       const totalYearsCeil = Math.ceil(totalYearsRaw);
-      const officerYearsCeil = Math.ceil(officerYearsRaw);
+      const officerYearsCeil = Math.ceil(officerYearsRaw || 0);
       let limitAmount = 0;
       let actualAmount = 0;
 
+      // 役員退職金目安額
       if (isExecutive) {
         const baseLimit = lastSalary * officerYearsRaw * factor;
         limitAmount = baseLimit + meritAddition;
-        
-        actualAmount = actualInputRaw;
-        if (!actualAmount || actualAmount <= 0){
-          actualAmount = limitAmount;
+
+        if (splitEnabled) {
+          const officerPartVal = parseCommaInt(officerPartInput.value);
+          const employeePartVal = parseCommaInt(employeePartInput.value);
+          const sumParts = officerPartVal + employeePartVal;
+          if (sumParts <= 0) {
+            errorDiv.textContent = '役員部分と従業員部分の合計を入力してください';
+            return;
+          }
+          actualAmount = sumParts;
+        } else {
+          actualAmount = actualInputRaw;
+          if (!actualAmount || actualAmount <= 0){
+            actualAmount = limitAmount; // 未入力時は目安額を採用
+          }
         }
       } else {
         limitAmount = 0;
         actualAmount = actualInputRaw;
       }
 
-      const deduction = calcRetirementDeduction(totalYearsRaw);
-      const base = actualAmount - deduction;
-      let taxableRetirement = 0;
-      let taxCalcNote = '';
-      
-      const isTokutei = isExecutive && (officerYearsCeil > 0 && officerYearsCeil <= 5);
-      const isShortEmployee = !isExecutive && (totalYearsCeil > 0 && totalYearsCeil <= 5);
+      // 退職所得控除
+      const baseDeduction = calcRetirementDeduction(totalYearsRaw);
+      let deduction = baseDeduction;
+      if (isDisabled) {
+        deduction += 1000000;
+      }
 
-      if (base > 0){
-        if (isTokutei) {
-          taxableRetirement = base;
-          taxCalcNote = '（特定役員退職手当等：1/2なし）';
-        } else if (isShortEmployee) {
-          if (base <= 3000000) {
-            taxableRetirement = Math.floor(base / 2);
-            taxCalcNote = '（短期退職手当等：300万円以下部分のみ1/2課税）';
+      // 課税退職所得金額の計算
+      let taxableRetRaw = 0;
+      let taxCalcNote = '';
+      const isTokuteiBasic = isExecutive && (officerYearsCeil > 0 && officerYearsCeil <= 5);
+      const isShortEmployeeWhole = !isExecutive && (totalYearsCeil > 0 && totalYearsCeil <= 5);
+
+      if (actualAmount <= deduction) {
+        taxableRetRaw = 0;
+        taxCalcNote = '（控除額が支給額以上のため、課税退職所得なし）';
+      } else {
+        if (isExecutive && splitEnabled && isTokuteiBasic) {
+          // 役員部分と従業員部分を区分計算
+          const officerPartVal = parseCommaInt(officerPartInput.value);
+          const employeePartVal = parseCommaInt(employeePartInput.value);
+
+          // 特定役員退職所得控除額（重複なしケースを前提：40万円×特定役員等勤続年数）
+          let tokuteiYears = officerYearsCeil;
+          if (tokuteiYears > totalYearsCeil) tokuteiYears = totalYearsCeil;
+          let tokuteiDeduction = 400000 * tokuteiYears;
+          if (tokuteiDeduction > deduction) tokuteiDeduction = deduction;
+
+          let generalDeduction = deduction - tokuteiDeduction;
+          if (generalDeduction < 0) generalDeduction = 0;
+
+          // 役員部分（特定役員）
+          let baseTokutei = officerPartVal - tokuteiDeduction;
+          if (baseTokutei < 0) baseTokutei = 0;
+          const taxableTokutei = baseTokutei; // 1/2なし
+
+          // 従業員部分
+          let baseGeneral = employeePartVal - generalDeduction;
+          if (baseGeneral < 0) baseGeneral = 0;
+
+          const generalYearsCeil = Math.max(totalYearsCeil - officerYearsCeil, 0);
+          let taxableGeneral = 0;
+          const isShortEmployeePortion = generalYearsCeil > 0 && generalYearsCeil <= 5;
+
+          if (baseGeneral > 0) {
+            if (isShortEmployeePortion) {
+              if (baseGeneral <= 3000000) {
+                taxableGeneral = Math.floor(baseGeneral / 2);
+                taxCalcNote = '（役員部分：特定役員退職手当等、従業員部分：短期退職手当等300万円以下部分のみ1/2課税）';
+              } else {
+                taxableGeneral = 1500000 + (baseGeneral - 3000000);
+                taxCalcNote = '（役員部分：特定役員退職手当等、従業員部分：短期退職手当等300万円超部分は1/2課税なし）';
+              }
+            } else {
+              taxableGeneral = Math.floor(baseGeneral / 2);
+              taxCalcNote = '（役員部分：特定役員退職手当等、従業員部分：一般退職手当等1/2課税）';
+            }
           } else {
-            taxableRetirement = 1500000 + (base - 3000000);
-            taxCalcNote = '（短期退職手当等：300万円超部分について1/2課税なし）';
+            taxCalcNote = '（役員部分：特定役員退職手当等のみ）';
           }
+
+          taxableRetRaw = taxableTokutei + taxableGeneral;
+
         } else {
-          taxableRetirement = Math.floor(base / 2);
-          taxCalcNote = '× 1/2（一般退職手当等）';
+          // 従来の一括計算
+          const base = actualAmount - deduction;
+          if (base <= 0) {
+            taxableRetRaw = 0;
+            taxCalcNote = '（控除額が支給額以上のため、課税退職所得なし）';
+          } else {
+            if (isTokuteiBasic) {
+              taxableRetRaw = base;
+              taxCalcNote = '（特定役員退職手当等：全額について1/2課税なし）';
+            } else if (isShortEmployeeWhole) {
+              if (base <= 3000000) {
+                taxableRetRaw = Math.floor(base / 2);
+                taxCalcNote = '（短期退職手当等：300万円以下部分のみ1/2課税）';
+              } else {
+                taxableRetRaw = 1500000 + (base - 3000000);
+                taxCalcNote = '（短期退職手当等：300万円超部分は1/2課税なし）';
+              }
+            } else {
+              taxableRetRaw = Math.floor(base / 2);
+              taxCalcNote = '× 1/2（一般退職手当等）';
+            }
+          }
         }
       }
 
-      const retIncomeTax = calcProgressiveTax(taxableRetirement);
-      const retInhabitantTax = calcInhabitantTaxRetirement(taxableRetirement);
+      // 課税退職所得金額の1,000円未満切捨て
+      let taxableForTable = 0;
+      if (taxableRetRaw > 0) {
+        taxableForTable = Math.floor(taxableRetRaw / 1000) * 1000;
+      }
+
+      const retIncomeTax = calcProgressiveTax(taxableForTable);
+      const retInhabitantTax = calcInhabitantTaxRetirement(taxableForTable);
       const netRet = actualAmount - retIncomeTax - retInhabitantTax;
 
+      // 目安額・比率・特定役員表示
       if (isExecutive) {
         limitSection.style.display = 'block';
         
         userTypeCell.textContent = '役員';
         totalYearsCell.textContent = formatYears(totalYearsRaw) + ' (控除計算: ' + totalYearsCeil + '年)';
+        officerYearsRow.style.display = 'table-row';
         officerYearsCell.textContent = formatYears(officerYearsRaw) + ' (判定: ' + officerYearsCeil + '年)';
         
         tokuteiRow.style.display = 'table-row';
-        tokuteiCell.innerHTML = isTokutei
-          ? '特定役員<span class="pill pill-danger">5年以下</span>'
-          : '一般退職<span class="pill pill-ok">6年以上</span>';
+        const generalYearsCeil = Math.max(totalYearsCeil - officerYearsCeil, 0);
+        if (!isTokuteiBasic) {
+          tokuteiCell.innerHTML = '一般退職<span class="pill pill-ok">6年以上</span>';
+        } else if (splitEnabled && generalYearsCeil > 0) {
+          tokuteiCell.innerHTML = '特定役員＋一般退職<span class="pill pill-danger">役員部分5年以下</span>';
+        } else {
+          tokuteiCell.innerHTML = '特定役員<span class="pill pill-danger">5年以下</span>';
+        }
 
         limitAmountCell.textContent = formatYen(limitAmount);
         actualAmountCell.textContent = formatYen(actualAmount);
@@ -1145,30 +1329,49 @@
 
       } else {
         limitSection.style.display = 'none';
+        userTypeCell.textContent = '一般従業員';
+        officerYearsRow.style.display = 'none';
+        tokuteiRow.style.display = 'none';
+        actualAmountCell.textContent = formatYen(actualAmount); // コピー用
       }
 
       deductionCell.textContent = formatYen(deduction);
-      taxableRetCell.textContent = formatYen(taxableRetirement);
+      taxableRetCell.textContent = formatYen(taxableForTable);
       retIncomeTaxCell.textContent = formatYen(retIncomeTax);
       retInhabitantTaxCell.textContent = formatYen(retInhabitantTax);
       netRetCell.textContent = formatYen(netRet);
 
-      let dedCalcStr = totalYearsCeil <= 20
-        ? `40万円 × ${totalYearsCeil}年`
-        : `800万円 + 70万円 × (${totalYearsCeil}年 - 20年)`;
+      let dedCalcStrBase;
+      if (totalYearsCeil <= 20) {
+        dedCalcStrBase = `40万円 × ${totalYearsCeil}年`;
+      } else {
+        dedCalcStrBase = `800万円 + 70万円 × (${totalYearsCeil}年 - 20年)`;
+      }
+      let dedCalcStr = dedCalcStrBase;
+      if (isDisabled) {
+        dedCalcStr += ' ＋ 障害者加算100万円';
+      }
 
       let taxableCalcStr = '';
-      if(base <= 0) {
-        taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ≦ 0 → 0円`;
+      if (taxableForTable <= 0) {
+        if (actualAmount <= deduction) {
+          taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ≦ 0 → 0円`;
+        } else {
+          taxableCalcStr = `区分計算の結果、課税退職所得は0円`;
+        }
       } else {
-        taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ${taxCalcNote} = ${fNum(taxableRetirement)}`;
+        if (isExecutive && splitEnabled && isTokuteiBasic) {
+          taxableCalcStr = `役員部分・従業員部分を区分計算した合計 = ${fNum(taxableForTable)}円 ${taxCalcNote}`;
+        } else {
+          taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ${taxCalcNote} = ${fNum(taxableForTable)}円`;
+        }
       }
 
       let taxProcessLines = [
         `退職所得控除 = ${dedCalcStr} = ${fNum(deduction)}`,
         `課税退職所得 = ${taxableCalcStr}`,
         `源泉所得税 = 速算表算出 (${fNum(retIncomeTax)}円)`,
-        `住民税 = ${fNum(taxableRetirement)} × 10% = ${fNum(retInhabitantTax)}円`
+        `住民税 = ${fNum(taxableForTable)} × 10%（標準税率・100円未満切捨て） = ${fNum(retInhabitantTax)}円`
       ];
       processTax.innerHTML = createProcessHTML(taxProcessLines);
 
@@ -1181,6 +1384,12 @@
     // --- Utils ---
     function resetAll() {
       document.querySelector('input[value="executive"]').checked = true;
+      reasonSelect.value = 'normal';
+      splitToggle.checked = false;
+      officerPartInput.value = '';
+      employeePartInput.value = '';
+      splitContainer.classList.add('hidden');
+
       updateUI();
       
       lastSalaryInput.value = '';
@@ -1223,17 +1432,19 @@
         alert('まずは試算を行ってください');
         return;
       }
-      const userType = document.querySelector('input[name="userType"]:checked').value === 'executive' ? '役員' : '一般従業員';
+      const isExec = document.querySelector('input[name="userType"]:checked').value === 'executive';
+      const userTypeLabel = isExec ? '役員' : '一般従業員';
+
       let text = [
         "【退職金試算結果】",
-        `対象区分: ${userType}`
+        `対象区分: ${userTypeLabel}`
       ];
 
-      if (userType === '役員') {
+      if (isExec) {
         text.push(`目安額: ${limitAmountCell.textContent}`);
       }
 
-      text.push(`支給金額: ${actualAmountCell.textContent}`);
+      text.push(`支給金額: ${actualAmountCell.textContent || formatYen(parseCommaInt(actualAmountInput.value))}`);
       text.push(`退職所得控除: ${deductionCell.textContent}`);
       text.push(`課税退職所得: ${taxableRetCell.textContent}`);
       text.push(`源泉税: ${retIncomeTaxCell.textContent}`);
