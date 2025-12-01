@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>退職金試算ツール（役員・従業員対応）</title>
+  <meta name="description" content="役員および従業員の退職金適正額や手取り額を試算するツールです。">
+
+  <!-- ファビコン設定 -->
+  <link rel="icon" href="favicon192192.png" sizes="192x192" />
+  <link rel="shortcut icon" href="favicon192192.png" />
+  <link rel="apple-touch-icon" href="favicon192192.png" />
+
+  <style>
+    :root{
+      --bg:#f4f9fb;
+      --card:#ffffff;
+      --ink:#1e2a2d;
+      --muted:#5a6a6d;
+      --accent:#578899;
+      --accent-dark:#476a7c;
+      --accent-soft:rgba(87,136,153,.08);
+      --accent-pale:rgba(87,136,153,0.1);
+      --border:#d1dde2;
+      --danger:#c0392b;
+      --ok:#1f9d55;
+      --focus-ring:rgba(87,136,153,.4);
+      --line:#e7eef3;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",
+        "Yu Gothic","Noto Sans JP",Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      line-height:1.6;
+      -webkit-text-size-adjust:100%;
+      padding-bottom: 40px;
+    }
+
+    /* --- Header (指定のデザイン) --- */
+    header{
+      background:var(--card);
+      border-bottom:1px solid var(--border);
+      padding:12px 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      position:sticky;
+      top:0;
+      z-index:100;
+      box-shadow:0 2px 4px rgba(0,0,0,0.02);
+    }
+    .logo-link {
+      display: inline-block;
+      line-height: 0;
+      flex-shrink: 0;
+    }
+    .logo {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+    .header-content {
+      flex: 1;
+      min-width: 280px;
+    }
+    header h1{
+      margin:0 0 6px;
+      font-size:1.2rem;
+      font-weight:700;
+      letter-spacing:.04em;
+      color: var(--accent-dark);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    header h1 span.badge{
+      font-size:.75rem;
+      padding:2px 8px;
+      border-radius:999px;
+      background:var(--accent-pale);
+      color:var(--accent);
+      border:1px solid rgba(87,136,153,.3);
+    }
+    header p.lead{
+      margin:0;
+      font-size:.85rem;
+      color:var(--muted);
+    }
+
+    /* --- Main Layout --- */
+    main{
+      max-width:800px;
+      margin:0 auto;
+      padding:16px;
+    }
+
+    /* --- Card Style --- */
+    .card{
+      background:var(--card);
+      border-radius:16px;
+      box-shadow:0 4px 12px rgba(35,80,90,.06);
+      padding:20px;
+      margin-bottom:20px;
+      border:1px solid rgba(87,136,153,.15);
+    }
+    .card h2{
+      margin:0 0 16px;
+      font-size:1.1rem;
+      border-left:5px solid var(--accent);
+      padding-left:10px;
+      line-height:1.3;
+      color:var(--ink);
+      border-bottom: none;
+    }
+
+    /* --- Radio Button Group --- */
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 24px;
+      padding: 4px 0;
+    }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: #fff;
+      transition: all 0.2s;
+    }
+    .radio-label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+    }
+    .radio-label input[type="radio"] {
+      width: 1.2em;
+      height: 1.2em;
+      accent-color: var(--accent);
+      margin: 0;
+    }
+
+    /* --- Form Elements --- */
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:24px;
+    }
+    @media (min-width:768px){
+      .grid{
+        grid-template-columns:1fr 1fr;
+        gap:32px;
+      }
+    }
+
+    .field{
+      margin-bottom:16px;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    label{
+      display:block;
+      font-size:.9rem;
+      font-weight:700;
+      margin-bottom:6px;
+      color:var(--accent-dark);
+    }
+    input[type="number"], input[type="text"], select{
+      appearance:none;
+      -webkit-appearance:none;
+      width:100%;
+      padding:12px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      font-size:16px;
+      font-family:inherit;
+      background:#fff;
+      color:var(--ink);
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .comma-input {
+      text-align: right;
+    }
+    select{
+      background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6a6d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat:no-repeat;
+      background-position:right 12px center;
+      background-size:16px;
+      padding-right:40px;
+    }
+    input:focus, select:focus{
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--focus-ring);
+    }
+    .suffix{
+      font-size:.8rem;
+      color:var(--muted);
+      margin-top:4px;
+      margin-left:2px;
+    }
+    
+    .chips-container {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .helper-btn {
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      border: 1px solid var(--accent);
+      background: #fff;
+      color: var(--accent);
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .helper-btn:hover {
+      background: var(--accent-soft);
+    }
+    .helper-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(87,136,153,.3);
+    }
+
+    /* --- Notes & Alerts --- */
+    .note{
+      font-size:.85rem;
+      color:var(--muted);
+      background:var(--bg);
+      border-radius:8px;
+      padding:12px;
+      line-height:1.7;
+      border:1px solid var(--border);
+    }
+    .note strong{
+      color:var(--accent-dark);
+    }
+    .note ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+    .note li {
+      margin-bottom: 4px;
+    }
+    .warn-text{
+      color:var(--danger);
+      font-weight:bold;
+      font-size:.9rem;
+      margin-top:12px;
+      padding:10px;
+      background:rgba(192,57,43,.05);
+      border-radius:8px;
+    }
+    .error{
+      color:var(--danger);
+      font-weight:bold;
+      font-size:.9rem;
+      margin-top:12px;
+      text-align:center;
+    }
+
+    /* --- Buttons --- */
+    .btn-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    .btn-row > button:last-child {
+      grid-column: 1 / -1;
+    }
+    button{
+      appearance:none;
+      border:none;
+      border-radius:8px;
+      padding:14px;
+      font-size:.95rem;
+      font-weight:700;
+      cursor:pointer;
+      font-family:inherit;
+      transition:opacity .2s, transform .1s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 6px;
+    }
+    button:active{
+      transform:scale(0.98);
+    }
+    .btn-primary{
+      background:var(--accent);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(87,136,153,.4);
+    }
+    .btn-outline{
+      background:#fff;
+      color:var(--accent-dark);
+      border:2px solid var(--accent);
+    }
+    .btn-ghost{
+      background:transparent;
+      color:var(--muted);
+      border:1px dashed var(--border);
+      font-weight:normal;
+      font-size:.85rem;
+    }
+
+    /* --- Bottom Actions --- */
+    .bottom-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .bottom-actions button {
+      font-size: .85rem;
+      padding: 10px 4px;
+      flex-direction: column;
+      gap: 4px;
+      height: auto;
+    }
+    .bottom-actions .btn-action {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .bottom-actions .btn-action:hover {
+      background: var(--bg);
+    }
+    .bottom-actions svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--accent);
+    }
+
+    /* --- Tables --- */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:12px;
+      font-size:.9rem;
+    }
+    th, td{
+      padding:12px 8px;
+      border-bottom:1px solid #e1e8ec;
+    }
+    th{
+      text-align:left;
+      color:var(--muted);
+      font-weight:600;
+      vertical-align:top;
+    }
+    td{
+      text-align:right;
+      color:var(--ink);
+    }
+    .highlight{
+      font-weight:700;
+      color:var(--accent-dark);
+      font-size:1.1rem;
+    }
+
+    /* --- Details --- */
+    details.calc-process {
+      margin-top: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    details.calc-process summary {
+      padding: 10px 12px;
+      cursor: pointer;
+      color: var(--accent-dark);
+      font-weight: 600;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    details.calc-process summary::-webkit-details-marker {
+      display: none;
+    }
+    details.calc-process summary::before {
+      content: "▶";
+      font-size: 0.7em;
+      transition: transform 0.2s;
+    }
+    details.calc-process[open] summary::before {
+      transform: rotate(90deg);
+    }
+    details.calc-process .process-content {
+      padding: 0 12px 12px 12px;
+      color: var(--muted);
+      border-top: 1px dashed var(--border);
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+    .process-formula {
+      font-family: monospace;
+      background: rgba(255,255,255,0.6);
+      padding: 2px 4px;
+      border-radius: 4px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 600px) {
+      table, tbody, tr, th, td {
+        display: block;
+        width: 100%;
+      }
+      tr {
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 12px;
+      }
+      tr:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      th {
+        padding-bottom: 4px;
+        font-size:.8rem;
+        border:none;
+      }
+      td {
+        padding-top: 0;
+        text-align: left;
+        padding-left: 0;
+        border:none;
+        font-size:1rem;
+      }
+      .btn-row{
+        grid-template-columns:1fr;
+      }
+      .btn-row > button:last-child {
+        grid-column: auto;
+      }
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      border-radius:4px;
+      font-size:.7rem;
+      padding:2px 6px;
+      background:var(--accent-pale);
+      color:var(--accent);
+      margin-left:6px;
+      vertical-align:middle;
+      white-space:nowrap;
+    }
+    .pill-danger{
+      background:rgba(192,57,43,.1);
+      color:var(--danger);
+    }
+    .pill-ok{
+      background:rgba(31,157,85,.1);
+      color:var(--ok);
+    }
+
+    .mk-mini{ 
+      text-align:center;
+      font-size:12px;
+      color:#7b8794;
+      padding:10px 10px 14px;
+      border-top:1px solid var(--line);
+      margin-top:24px;
+      white-space:nowrap;
+      overflow-x:auto 
+    }
+    .mk-mini a{color:inherit;text-decoration:underline}
+    .mk-mini::-webkit-scrollbar{height:8px}
+    .mk-mini::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        padding-bottom: 0;
+      }
+      header, .radio-group, .btn-row, .bottom-actions, .input-note {
+        display: none !important;
+      }
+      header .header-content p { display: none; }
+      .card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+      }
+      details.calc-process {
+        border: 1px solid #eee;
+      }
+      main {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo-link" href="https://takatrp.github.io/tool-portal/" target="_blank" rel="noopener">
+      <img src="./logo.jpg" alt="松本会計ロゴ" class="logo" onerror="this.style.display='none'" />
+    </a>
+    <div class="header-content">
+      <h1>
+        退職金試算ツール
+        <span class="badge">Ver 1.1</span>
+      </h1>
+      <p class="lead">
+        役員退職金の適正額目安および、退職手当の手取り額を概算シミュレーションします。
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section class="card input-section">
+      <h2>基本情報入力</h2>
+
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="userType" value="executive" checked>
+          役員
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="userType" value="employee">
+          一般従業員
+        </label>
+      </div>
+
+      <div class="grid">
+        <div id="leftCol">
+          <div class="field" id="lastSalaryField">
+            <label for="lastSalary">最終月額報酬（額面）</label>
+            <input id="lastSalary" type="text" inputmode="numeric" placeholder="例）1,000,000" class="comma-input" />
+            <div class="suffix">円／月</div>
+          </div>
+
+          <div class="field" id="totalYearsField">
+            <label for="totalYears" id="totalYearsLabel">勤続期間（従業員期間含む）</label>
+            <input id="totalYears" type="number" min="0" step="1" placeholder="例）25" />
+            <div class="suffix">年（退職所得控除の計算に使用）</div>
+          </div>
+
+          <div class="field" id="officerYearsField">
+            <label for="officerYears">うち役員在任期間</label>
+            <input id="officerYears" type="number" min="0" step="1" placeholder="例）10" />
+            <div class="suffix">年（適正額・特定役員の判定に使用）</div>
+          </div>
+        </div>
+
+        <div id="rightCol">
+          <div class="field" id="multiplierField">
+            <label for="roleSelect">功績倍率（係数）</label>
+            <div style="margin-bottom:8px;">
+              <select id="roleSelect">
+                <option value="custom">― 自由入力 ―</option>
+                <option value="3.0" selected>代表取締役・CEO（3.0）</option>
+                <option value="2.5">専務・常務取締役（2.5）</option>
+                <option value="2.0">取締役（2.0）</option>
+                <option value="1.5">非常勤役員（1.5）</option>
+              </select>
+            </div>
+            <label for="factor" style="font-size:0.8rem;">倍率手入力（直接入力で自由入力へ）</label>
+            <input id="factor" type="number" min="0" step="0.1" placeholder="例）3.0" value="3.0" />
+          </div>
+
+          <div class="field" id="meritAdditionField">
+            <label for="meritAddition">功労加算金（上乗せ・任意）</label>
+            <input id="meritAddition" type="text" inputmode="numeric" placeholder="0" class="comma-input" />
+            <div class="suffix">円（特別な功労がある場合など）</div>
+            <div class="chips-container">
+              <button type="button" class="helper-btn" data-percent="10">＋10%</button>
+              <button type="button" class="helper-btn" data-percent="20">＋20%</button>
+              <button type="button" class="helper-btn" data-percent="30">＋30%</button>
+            </div>
+          </div>
+
+          <div class="field" id="actualAmountField">
+            <label for="actualAmount" id="actualAmountLabel">支給金額（予定）</label>
+            <input id="actualAmount" type="text" inputmode="numeric" placeholder="支給総額を入力" class="comma-input" />
+            <div class="suffix" id="actualAmountSuffix">円（役員は未入力時、目安額で計算）</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note input-note" id="executiveNote" style="margin-top:16px;">
+        ※役員の目安額（適正額）は「(最終月額報酬 × 役員在任期間 × 功績倍率) ＋ 功労加算金」で算出します。
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="calcBtn">試算する</button>
+        <button class="btn-outline" id="resetBtnTop">リセット</button>
+        <button class="btn-ghost" id="copyLimitBtn">目安額を「支給金額」にコピー</button>
+      </div>
+      <div id="error" class="error"></div>
+    </section>
+
+    <div id="resultArea" style="display:none;">
+
+      <section class="card" id="limitSection">
+        <h2>目安額と支給額の比較</h2>
+        <table id="limitTable">
+          <tbody>
+            <tr>
+              <th>対象者区分</th>
+              <td id="userTypeCell"></td>
+            </tr>
+            <tr>
+              <th>勤続期間（全体）</th>
+              <td id="totalYearsCell"></td>
+            </tr>
+            <tr id="officerYearsRow">
+              <th>うち役員在任期間</th>
+              <td id="officerYearsCell"></td>
+            </tr>
+            <tr id="tokuteiRow">
+              <th>特定役員判定</th>
+              <td id="tokuteiCell"></td>
+            </tr>
+            <tr>
+              <th>退職金の目安額（適正額）<br><span style="font-size:0.75rem; font-weight:normal;">(倍率法 ＋ 加算金)</span></th>
+              <td id="limitAmountCell" class="highlight"></td>
+            </tr>
+            <tr>
+              <th>実際の支給額</th>
+              <td id="actualAmountCell"></td>
+            </tr>
+            <tr>
+              <th>支給額 ÷ 目安額</th>
+              <td id="ratioCell"></td>
+            </tr>
+          </tbody>
+        </table>
+        <div id="ratioMsg" class="warn-text" style="display:none;"></div>
+
+        <details class="calc-process">
+          <summary>計算過程・内訳を表示</summary>
+          <div class="process-content" id="processLimit"></div>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2>税金・手取り試算</h2>
+        <div class="note">
+          勤続期間に基づく退職所得控除を適用し、手取り額を計算します。
+        </div>
+
+        <table id="retTable">
+          <tbody>
+            <tr>
+              <th>退職所得控除額</th>
+              <td id="deductionCell"></td>
+            </tr>
+            <tr>
+              <th>課税退職所得金額</th>
+              <td id="taxableRetCell"></td>
+            </tr>
+            <tr>
+              <th>所得税・復興税（源泉）</th>
+              <td id="retIncomeTaxCell"></td>
+            </tr>
+            <tr>
+              <th>住民税（概算）</th>
+              <td id="retInhabitantTaxCell"></td>
+            </tr>
+            <tr>
+              <th style="color:var(--accent-dark); font-weight:bold;">手取り退職金額（概算）</th>
+              <td id="netRetCell" class="highlight" style="color:var(--accent-dark); font-size:1.3rem;"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <details class="calc-process">
+          <summary>計算過程・内訳を表示</summary>
+          <div class="process-content" id="processTax"></div>
+        </details>
+      </section>
+
+      <div class="bottom-actions">
+        <button class="btn-action" id="copyResultBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          結果をコピー
+        </button>
+        <button class="btn-action" id="resetBtnBottom">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          リセット
+        </button>
+        <button class="btn-action" id="printBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          印刷/PDF
+        </button>
+      </div>
+
+    </div>
+
+    <section class="card" style="background:var(--bg); border:none; box-shadow:none; padding:0; margin-top:20px;">
+      <div class="note" style="font-size:0.8rem;">
+        <strong>【ご注意・免責事項】</strong>
+        <ul>
+          <li><strong>損金算入の制限（不相当に高額な部分）</strong><br>
+          役員退職金は、法人税法上「不相当に高額な部分」は損金算入が認められません（法人税法34条2項）。一般的には「最終報酬月額 × 役員在任年数 × 功績倍率」で計算される功績倍率法が用いられますが、この計算結果であれば無条件に認められるわけではありません。</li>
+
+          <li><strong>功績倍率の設定根拠について</strong><br>
+          本ツールで初期設定されている功績倍率（代表取締役3.0、取締役2.0等）は、過去の裁判例や税務実務において一般的とされる水準を参考にした目安です。<br>
+          税務上の適正額は、<strong>「同業種・同規模法人の平均的な支給倍率（平均功績倍率）」</strong>を基礎とし、本人の職務内容や会社への貢献度などを総合的に勘案して判断されます。したがって、本ツールの倍率を用いれば必ず損金算入が認められるわけではありません。</li>
+          
+          <li><strong>功労加算金について</strong><br>
+          功労加算金（30%の上乗せ等）を支給する場合、定款の規定や株主総会の決議、および具体的な功績（創業者の功労など）を客観的に説明できる資料が必要です。根拠の薄い安易な上乗せは、税務調査で否認されるリスクが高まります。</li>
+          
+          <li><strong>税制改正や法令の変更</strong><br>
+          本ツールは作成時点の法令に基づき計算を行っています。今後の税制改正により、計算方法や税率が変更される可能性があります。</li>
+          
+          <li><strong>勤続5年以下の従業員の退職金（短期退職手当等）</strong><br>
+          勤続年数が5年以下の従業員に支給する退職金は、原則として「短期退職手当等」として取り扱われ、退職所得控除額を控除した残額のうち300万円を超える部分については2分の1課税が適用されません。本ツールではこの計算に対応していますが、退職事由や支給形態によっては該当しないケースもあるため、詳細は専門家にご確認ください。</li>
+
+          <li><strong>他の退職金との合算</strong><br>
+          同一年中に、他の会社やiDeCo（個人型確定拠出年金）などから退職金を受け取っている場合、それらを合算して退職所得控除や税額を計算する必要があります。本ツールは「今回入力した退職金」のみを対象としており、合算計算には対応していません。</li>
+
+          <li><strong>最終的な判断について</strong><br>
+          本ツールは概算シミュレーションです。実際の支給額決定や税務申告にあたっては、必ず<strong>松本会計スタッフ</strong>や税理士等の専門家にご相談ください。</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="mk-mini">
+      © <span id="cpy-year">2025</span>
+      <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜ 
+      <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a>
+    </footer>
+  </main>
+
+  <script>
+    // Init Auto Year
+    (function(){
+      var y=new Date().getFullYear();
+      var cpy=document.getElementById('cpy-year');
+      if(cpy) cpy.textContent=String(y);
+    })();
+
+    // Inputs
+    const typeRadios = document.querySelectorAll('input[name="userType"]');
+    const roleSelect = document.getElementById('roleSelect');
+    const factorInput = document.getElementById('factor');
+    const meritAdditionInput = document.getElementById('meritAddition');
+    const lastSalaryInput = document.getElementById('lastSalary');
+    const totalYearsInput = document.getElementById('totalYears');
+    const officerYearsInput = document.getElementById('officerYears');
+    const actualAmountInput = document.getElementById('actualAmount');
+    
+    // UI Elements (Fields)
+    const leftCol = document.getElementById('leftCol');
+    const rightCol = document.getElementById('rightCol');
+    const lastSalaryField = document.getElementById('lastSalaryField');
+    const totalYearsField = document.getElementById('totalYearsField');
+    const officerYearsField = document.getElementById('officerYearsField');
+    
+    const multiplierField = document.getElementById('multiplierField');
+    const meritAdditionField = document.getElementById('meritAdditionField');
+    
+    const actualAmountField = document.getElementById('actualAmountField');
+
+    const executiveNote = document.getElementById('executiveNote');
+    const totalYearsLabel = document.getElementById('totalYearsLabel');
+    const actualAmountLabel = document.getElementById('actualAmountLabel');
+    const actualAmountSuffix = document.getElementById('actualAmountSuffix');
+    const addPercentBtns = document.querySelectorAll('.helper-btn[data-percent]');
+
+    // State for auto-calc
+    let currentPercent = null;
+
+    // Buttons
+    const calcBtn = document.getElementById('calcBtn');
+    const resetBtnTop = document.getElementById('resetBtnTop');
+    const resetBtnBottom = document.getElementById('resetBtnBottom');
+    const copyLimitBtn = document.getElementById('copyLimitBtn');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+    const printBtn = document.getElementById('printBtn');
+
+    // Output Elements
+    const errorDiv = document.getElementById('error');
+    const resultArea = document.getElementById('resultArea');
+    
+    // Output Cells
+    const limitSection = document.getElementById('limitSection');
+    const userTypeCell = document.getElementById('userTypeCell');
+    const totalYearsCell = document.getElementById('totalYearsCell');
+    const officerYearsRow = document.getElementById('officerYearsRow');
+    const officerYearsCell = document.getElementById('officerYearsCell');
+    const tokuteiRow = document.getElementById('tokuteiRow');
+    const tokuteiCell = document.getElementById('tokuteiCell');
+    const limitAmountCell = document.getElementById('limitAmountCell');
+    const actualAmountCell = document.getElementById('actualAmountCell');
+    const ratioCell = document.getElementById('ratioCell');
+    const ratioMsg = document.getElementById('ratioMsg');
+    const processLimit = document.getElementById('processLimit');
+
+    const deductionCell = document.getElementById('deductionCell');
+    const taxableRetCell = document.getElementById('taxableRetCell');
+    const retIncomeTaxCell = document.getElementById('retIncomeTaxCell');
+    const retInhabitantTaxCell = document.getElementById('retInhabitantTaxCell');
+    const netRetCell = document.getElementById('netRetCell');
+    const processTax = document.getElementById('processTax');
+
+    // --- Helper Functions ---
+    
+    function formatComma(num) {
+      if (!isFinite(num)) return '';
+      return num.toLocaleString('ja-JP');
+    }
+
+    function parseCommaInt(str) {
+      if (!str) return 0;
+      return parseInt(str.replace(/,/g, ''), 10) || 0;
+    }
+
+    function attachCommaListener(input) {
+      input.addEventListener('input', (e) => {
+        const raw = e.target.value.replace(/,/g, '');
+        if (!raw) return;
+        
+        const num = parseInt(raw, 10);
+        if (!isNaN(num)) {
+          e.target.value = num.toLocaleString('ja-JP');
+        } else {
+          e.target.value = '';
+        }
+      });
+    }
+
+    document.querySelectorAll('.comma-input').forEach(attachCommaListener);
+
+    function fNum(num){
+      if(!isFinite(num)) return 0;
+      return num.toLocaleString('ja-JP');
+    }
+
+    function formatYen(value){
+      if (!isFinite(value)) return '-';
+      return value.toLocaleString('ja-JP', { maximumFractionDigits: 0 }) + ' 円';
+    }
+
+    function formatYears(value){
+      if (!isFinite(value)) return '-';
+      return value.toFixed(2).replace(/\.00$/,'') + ' 年';
+    }
+
+    function createProcessHTML(lines) {
+      return lines.map(line => `<div class="process-formula">${line}</div>`).join('');
+    }
+
+    function calcRetirementDeduction(yearsRaw){
+      if (!isFinite(yearsRaw) || yearsRaw <= 0) return 0;
+      const years = Math.ceil(yearsRaw);
+      if (years <= 20){
+        const base = 400000 * years;
+        return base < 800000 ? 800000 : base;
+      } else {
+        return 800000 + 700000 * (years - 20);
+      }
+    }
+
+    function calcProgressiveTax(taxable){
+      if (!isFinite(taxable) || taxable <= 0) return 0;
+      let rate, deduction;
+      if (taxable <= 1950000){ rate = 0.05; deduction = 0; }
+      else if (taxable <= 3300000){ rate = 0.10; deduction = 97500; }
+      else if (taxable <= 6950000){ rate = 0.20; deduction = 427500; }
+      else if (taxable <= 9000000){ rate = 0.23; deduction = 636000; }
+      else if (taxable <= 18000000){ rate = 0.33; deduction = 1536000; }
+      else if (taxable <= 40000000){ rate = 0.40; deduction = 2796000; }
+      else { rate = 0.45; deduction = 4796000; }
+      
+      let tax = (taxable * rate - deduction) * 1.021;
+      if (tax < 0) tax = 0;
+      return Math.floor(tax);
+    }
+
+    function calcInhabitantTaxRetirement(taxable){
+      if (!isFinite(taxable) || taxable <= 0) return 0;
+      const raw = taxable * 0.10;
+      return Math.floor(raw / 100) * 100;
+    }
+
+    // UI切り替え
+    function updateUI(){
+      const isExecutive = document.querySelector('input[name="userType"]:checked').value === 'executive';
+      
+      if (isExecutive) {
+        lastSalaryField.classList.remove('hidden');
+        officerYearsField.classList.remove('hidden');
+        multiplierField.classList.remove('hidden');
+        meritAdditionField.classList.remove('hidden');
+        copyLimitBtn.style.display = 'block'; // flex -> block (btn-outline style check)
+        executiveNote.style.display = 'block';
+
+        totalYearsLabel.textContent = '勤続期間（従業員期間含む）';
+        actualAmountLabel.textContent = '支給金額（予定）';
+        actualAmountSuffix.textContent = '円（役員は未入力時、目安額で計算）';
+
+        leftCol.appendChild(lastSalaryField);
+        leftCol.appendChild(totalYearsField);
+        leftCol.appendChild(officerYearsField);
+        
+        rightCol.appendChild(multiplierField);
+        rightCol.appendChild(meritAdditionField);
+        rightCol.appendChild(actualAmountField);
+
+      } else {
+        lastSalaryField.classList.add('hidden');
+        officerYearsField.classList.add('hidden');
+        multiplierField.classList.add('hidden');
+        meritAdditionField.classList.add('hidden');
+        copyLimitBtn.style.display = 'none';
+        executiveNote.style.display = 'none';
+
+        totalYearsLabel.textContent = '勤続期間';
+        actualAmountLabel.textContent = '支給金額（直接入力）';
+        actualAmountSuffix.textContent = '円';
+
+        leftCol.appendChild(actualAmountField);
+        leftCol.appendChild(totalYearsField);
+      }
+      
+      resultArea.style.display = 'none';
+      errorDiv.textContent = '';
+    }
+
+    // --- Auto-calc Merit Addition ---
+    
+    function updateMeritAddition() {
+      if (currentPercent === null) return;
+
+      const lastSalary = parseCommaInt(lastSalaryInput.value);
+      const officerYears = Number(officerYearsInput.value);
+      const factor = Number(factorInput.value);
+
+      if (lastSalary > 0 && officerYears > 0 && factor > 0) {
+        const base = lastSalary * officerYears * factor;
+        const addition = Math.floor(base * (currentPercent / 100));
+        meritAdditionInput.value = formatComma(addition);
+      }
+    }
+
+    // Event Listeners
+    typeRadios.forEach(radio => radio.addEventListener('change', updateUI));
+    
+    roleSelect.addEventListener('change', () => {
+      const v = roleSelect.value;
+      if (v === 'custom') return; 
+      factorInput.value = v;
+      updateMeritAddition(); 
+    });
+
+    factorInput.addEventListener('input', () => {
+      roleSelect.value = 'custom';
+      updateMeritAddition(); 
+    });
+
+    lastSalaryInput.addEventListener('input', updateMeritAddition);
+    officerYearsInput.addEventListener('input', updateMeritAddition);
+
+    meritAdditionInput.addEventListener('input', (e) => {
+        if (e.isTrusted) {
+            currentPercent = null;
+            addPercentBtns.forEach(b => b.classList.remove('active'));
+        }
+    });
+
+    // % Chips Logic
+    addPercentBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const percent = Number(e.target.dataset.percent);
+        
+        if (currentPercent === percent) {
+            currentPercent = null;
+            addPercentBtns.forEach(b => b.classList.remove('active'));
+        } else {
+            currentPercent = percent;
+            addPercentBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const lastSalary = parseCommaInt(lastSalaryInput.value);
+            const officerYears = Number(officerYearsInput.value);
+            const factor = Number(factorInput.value);
+
+            if (lastSalary > 0 && officerYears > 0 && factor > 0) {
+                updateMeritAddition();
+            } else {
+                alert('先に報酬・年数・倍率を入力してください。');
+                currentPercent = null;
+                e.target.classList.remove('active');
+            }
+        }
+      });
+    });
+
+    // --- Main Calculation ---
+    calcBtn.addEventListener('click', () => {
+      errorDiv.textContent = '';
+      ratioMsg.style.display = 'none';
+      resultArea.style.display = 'none';
+
+      const userType = document.querySelector('input[name="userType"]:checked').value;
+      const isExecutive = (userType === 'executive');
+
+      const lastSalary = parseCommaInt(lastSalaryInput.value);
+      const totalYearsRaw = Number(totalYearsInput.value || 0);
+      let officerYearsRaw = Number(officerYearsInput.value || 0);
+      
+      const factor = Number(factorInput.value);
+      const meritAddition = parseCommaInt(meritAdditionInput.value);
+      
+      const actualInputRaw = parseCommaInt(actualAmountInput.value); 
+
+      if (!isFinite(totalYearsRaw) || totalYearsRaw <= 0){
+        errorDiv.textContent = '勤続期間を入力してください';
+        return;
+      }
+      
+      if (isExecutive) {
+        if (!lastSalary || lastSalary <= 0){ errorDiv.textContent = '最終月額報酬を入力してください'; return; }
+        if (!isFinite(officerYearsRaw) || officerYearsRaw <= 0){ errorDiv.textContent = '役員在任期間を入力してください'; return; }
+        if (officerYearsRaw > totalYearsRaw){ errorDiv.textContent = '役員在任期間が勤続期間を超えています'; return; }
+        if (factor === null || factor === undefined || factor < 0){ errorDiv.textContent = '功績倍率を正しく入力してください'; return; }
+      } else {
+        if (!actualInputRaw || actualInputRaw <= 0) {
+          errorDiv.textContent = '支給金額を入力してください';
+          return;
+        }
+      }
+
+      const totalYearsCeil = Math.ceil(totalYearsRaw);
+      const officerYearsCeil = Math.ceil(officerYearsRaw);
+      let limitAmount = 0;
+      let actualAmount = 0;
+
+      if (isExecutive) {
+        const baseLimit = lastSalary * officerYearsRaw * factor;
+        limitAmount = baseLimit + meritAddition;
+        
+        actualAmount = actualInputRaw;
+        if (!actualAmount || actualAmount <= 0){
+          actualAmount = limitAmount;
+        }
+      } else {
+        limitAmount = 0;
+        actualAmount = actualInputRaw;
+      }
+
+      const deduction = calcRetirementDeduction(totalYearsRaw);
+      const base = actualAmount - deduction;
+      let taxableRetirement = 0;
+      let taxCalcNote = '';
+      
+      const isTokutei = isExecutive && (officerYearsCeil > 0 && officerYearsCeil <= 5);
+      const isShortEmployee = !isExecutive && (totalYearsCeil > 0 && totalYearsCeil <= 5);
+
+      if (base > 0){
+        if (isTokutei) {
+          taxableRetirement = base;
+          taxCalcNote = '（特定役員退職手当等：1/2なし）';
+        } else if (isShortEmployee) {
+          if (base <= 3000000) {
+            taxableRetirement = Math.floor(base / 2);
+            taxCalcNote = '（短期退職手当等：300万円以下部分のみ1/2課税）';
+          } else {
+            taxableRetirement = 1500000 + (base - 3000000);
+            taxCalcNote = '（短期退職手当等：300万円超部分について1/2課税なし）';
+          }
+        } else {
+          taxableRetirement = Math.floor(base / 2);
+          taxCalcNote = '× 1/2（一般退職手当等）';
+        }
+      }
+
+      const retIncomeTax = calcProgressiveTax(taxableRetirement);
+      const retInhabitantTax = calcInhabitantTaxRetirement(taxableRetirement);
+      const netRet = actualAmount - retIncomeTax - retInhabitantTax;
+
+      if (isExecutive) {
+        limitSection.style.display = 'block';
+        
+        userTypeCell.textContent = '役員';
+        totalYearsCell.textContent = formatYears(totalYearsRaw) + ' (控除計算: ' + totalYearsCeil + '年)';
+        officerYearsCell.textContent = formatYears(officerYearsRaw) + ' (判定: ' + officerYearsCeil + '年)';
+        
+        tokuteiRow.style.display = 'table-row';
+        tokuteiCell.innerHTML = isTokutei
+          ? '特定役員<span class="pill pill-danger">5年以下</span>'
+          : '一般退職<span class="pill pill-ok">6年以上</span>';
+
+        limitAmountCell.textContent = formatYen(limitAmount);
+        actualAmountCell.textContent = formatYen(actualAmount);
+
+        const ratio = limitAmount > 0 ? actualAmount / limitAmount : 0;
+        if (limitAmount > 0){
+          ratioCell.textContent = (ratio * 100).toFixed(1).replace(/\.0$/,'') + ' ％';
+        } else {
+          ratioCell.textContent = '-';
+        }
+
+        if (ratio > 1.0){
+          ratioMsg.style.display = 'block';
+          ratioMsg.textContent = '注意：支給額が適正額目安を超えています。';
+        } else {
+          ratioMsg.style.display = 'none';
+        }
+
+        const baseVal = lastSalary * officerYearsRaw * factor;
+        let limitProcess = [
+          `ベース部分 = 月額 ${fNum(lastSalary)} × 年数 ${officerYearsRaw} × 倍率 ${factor} = ${fNum(baseVal)}`,
+          `功労加算金 = ${fNum(meritAddition)}`,
+          `目安額合計 = ${fNum(baseVal)} + ${fNum(meritAddition)} = ${fNum(limitAmount)}円`
+        ];
+        processLimit.innerHTML = createProcessHTML(limitProcess);
+
+      } else {
+        limitSection.style.display = 'none';
+      }
+
+      deductionCell.textContent = formatYen(deduction);
+      taxableRetCell.textContent = formatYen(taxableRetirement);
+      retIncomeTaxCell.textContent = formatYen(retIncomeTax);
+      retInhabitantTaxCell.textContent = formatYen(retInhabitantTax);
+      netRetCell.textContent = formatYen(netRet);
+
+      let dedCalcStr = totalYearsCeil <= 20
+        ? `40万円 × ${totalYearsCeil}年`
+        : `800万円 + 70万円 × (${totalYearsCeil}年 - 20年)`;
+
+      let taxableCalcStr = '';
+      if(base <= 0) {
+        taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ≦ 0 → 0円`;
+      } else {
+        taxableCalcStr = `(支給額 ${fNum(actualAmount)} - 控除 ${fNum(deduction)}) ${taxCalcNote} = ${fNum(taxableRetirement)}`;
+      }
+
+      let taxProcessLines = [
+        `退職所得控除 = ${dedCalcStr} = ${fNum(deduction)}`,
+        `課税退職所得 = ${taxableCalcStr}`,
+        `源泉所得税 = 速算表算出 (${fNum(retIncomeTax)}円)`,
+        `住民税 = ${fNum(taxableRetirement)} × 10% = ${fNum(retInhabitantTax)}円`
+      ];
+      processTax.innerHTML = createProcessHTML(taxProcessLines);
+
+      resultArea.style.display = 'block';
+      setTimeout(() => {
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    });
+
+    // --- Utils ---
+    function resetAll() {
+      document.querySelector('input[value="executive"]').checked = true;
+      updateUI();
+      
+      lastSalaryInput.value = '';
+      totalYearsInput.value = '';
+      officerYearsInput.value = '';
+      factorInput.value = '3.0';
+      roleSelect.value = '3.0';
+      meritAdditionInput.value = '';
+      currentPercent = null;
+      addPercentBtns.forEach(b => b.classList.remove('active'));
+      
+      actualAmountInput.value = '';
+      errorDiv.textContent = '';
+      resultArea.style.display = 'none';
+      
+      document.querySelectorAll('details.calc-process').forEach(d => d.removeAttribute('open'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    resetBtnTop.addEventListener('click', resetAll);
+    resetBtnBottom.addEventListener('click', resetAll);
+
+    copyLimitBtn.addEventListener('click', () => {
+      const lastSalary = parseCommaInt(lastSalaryInput.value);
+      const officerYears = Number(officerYearsInput.value);
+      const factor = Number(factorInput.value);
+      const addition = parseCommaInt(meritAdditionInput.value);
+
+      if (lastSalary > 0 && officerYears > 0 && factor >= 0){
+        const limitAmount = (lastSalary * officerYears * factor) + addition;
+        actualAmountInput.value = formatComma(Math.floor(limitAmount));
+        errorDiv.textContent = '';
+      } else {
+        errorDiv.textContent = '報酬、役員在任期間、倍率を入力してください';
+      }
+    });
+
+    copyResultBtn.addEventListener('click', () => {
+      if(resultArea.style.display === 'none') {
+        alert('まずは試算を行ってください');
+        return;
+      }
+      const userType = document.querySelector('input[name="userType"]:checked').value === 'executive' ? '役員' : '一般従業員';
+      let text = [
+        "【退職金試算結果】",
+        `対象区分: ${userType}`
+      ];
+
+      if (userType === '役員') {
+        text.push(`目安額: ${limitAmountCell.textContent}`);
+      }
+
+      text.push(`支給金額: ${actualAmountCell.textContent}`);
+      text.push(`退職所得控除: ${deductionCell.textContent}`);
+      text.push(`課税退職所得: ${taxableRetCell.textContent}`);
+      text.push(`源泉税: ${retIncomeTaxCell.textContent}`);
+      text.push(`住民税: ${retInhabitantTaxCell.textContent}`);
+      text.push(`手取り額: ${netRetCell.textContent}`);
+      text.push("※本結果は概算です。詳細は松本会計スタッフにご相談ください。");
+
+      navigator.clipboard.writeText(text.join('\n')).then(() => {
+        alert('結果をコピーしました');
+      }).catch(err => {
+        console.error('コピー失敗:', err);
+      });
+    });
+
+    printBtn.addEventListener('click', () => {
+      window.print();
+    });
+
+    // 初期化実行
+    updateUI();
+
+  </script>
+</body>
+</html>
